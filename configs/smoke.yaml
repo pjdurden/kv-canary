@@ -1,0 +1,7 @@
+# configs/smoke.yaml  — tiny CPU end-to-end
+models: [distilgpt2]
+tasks: [code, perplexity]
+compressors:
+  - {method: full, budget: 1.0}
+  - {method: streamingllm, budget: 0.5}
+limits: {code: 2, perplexity: 1, max_new_tokens: 32}
