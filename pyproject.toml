@@ -1,0 +1,17 @@
+[project]
+name = "kvcanary"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["pyyaml>=6"]
+[project.optional-dependencies]
+ml = ["torch>=2.2", "transformers>=4.44", "matplotlib>=3.8"]
+dev = ["pytest>=8", "ruff>=0.6"]
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+[tool.setuptools.packages.find]
+include = ["kvcanary*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
