@@ -2,6 +2,7 @@
 name = "kvcanary"
 version = "0.1.0"
 requires-python = ">=3.11"
+classifiers = ["License :: OSI Approved :: MIT License"]
 dependencies = ["pyyaml>=6"]
 [project.optional-dependencies]
 ml = ["torch>=2.2", "transformers>=4.44", "matplotlib>=3.8"]

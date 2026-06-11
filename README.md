@@ -1,5 +1,9 @@
 # kv-canary
 
+[![CI](https://github.com/pjdurden/kv-canary/actions/workflows/ci.yml/badge.svg)](https://github.com/pjdurden/kv-canary/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+
 **A canary for *silent* KV-cache-compression failures.**
 
 Lossy KV-cache compression (quantization, token eviction) is benchmarked almost entirely on
@@ -118,3 +122,7 @@ configs/         smoke.yaml (CPU) · v1.yaml (GPU matrix)
 scripts/         aggregate_and_report.py
 docs/            RUNBOOK.md · superpowers/specs/ (design) · superpowers/plans/ (build plan)
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
