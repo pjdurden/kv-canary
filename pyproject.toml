@@ -12,6 +12,14 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["kvcanary*"]
 
+[tool.pytest.ini_options]
+markers = ["slow: loads a real model (CPU, downloads weights)"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 88
+
+[tool.ruff.lint.per-file-ignores]
+# tests legitimately import after pytest.importorskip(...) and append imports next to the
+# tests that use them, which both trip E402 (import-not-at-top).
+"tests/**" = ["E402"]
