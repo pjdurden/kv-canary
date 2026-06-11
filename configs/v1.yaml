@@ -1,0 +1,16 @@
+# configs/v1.yaml  — full experiment matrix (run on a rented 24GB spot GPU)
+models: [Qwen/Qwen2.5-7B-Instruct]
+tasks: [code, tool, perplexity]
+compressors:
+  - {method: full,         budget: 1.0}
+  - {method: quantized,    budget: 0.5}
+  - {method: quantized,    budget: 0.25}
+  - {method: quantized,    budget: 0.125}
+  - {method: streamingllm, budget: 0.75}
+  - {method: streamingllm, budget: 0.5}
+  - {method: streamingllm, budget: 0.25}
+  - {method: streamingllm, budget: 0.125}
+  - {method: snapkv,       budget: 0.75}
+  - {method: snapkv,       budget: 0.5}
+  - {method: snapkv,       budget: 0.25}
+  - {method: snapkv,       budget: 0.125}

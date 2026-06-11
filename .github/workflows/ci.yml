@@ -8,7 +8,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: pip install -e ".[dev]"
-      - run: ruff check kvcanary
+      - run: ruff check kvcanary tests scripts
       - run: pytest -q
       - run: pip install -e ".[dev,ml]"
       - run: pytest -q -m slow      # CPU end-to-end smoke (downloads distilgpt2)

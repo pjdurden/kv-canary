@@ -36,17 +36,17 @@ def run_cells(cells, backend, compressor_factory, tasks, out_path: str) -> int:
                 if task.needs_generation:
                     gen = backend.generate(sample.prompt, compressor=comp)
                     res = task.evaluate(sample, output=gen.text)
-                    n_tok, kv = gen.n_tokens, gen.kv_bytes_retained
+                    raw, n_tok, kv = gen.text, gen.n_tokens, gen.kv_bytes_retained
                 else:
                     ppl = backend.score(sample.prompt, compressor=comp)
                     res = task.evaluate(sample, output="", ppl=ppl)
                     full_bytes = getattr(backend, "full_bytes", 1000.0)
-                    n_tok, kv = 0, comp.kv_bytes_retained(full_bytes)
+                    raw, n_tok, kv = "", 0, comp.kv_bytes_retained(full_bytes)
                 row = CellResult(
                     spec=spec,
                     sample_id=sample.id,
                     scores=res.scores,
-                    raw_output="",
+                    raw_output=raw,
                     n_tokens=n_tok,
                     latency_s=time.perf_counter() - t0,
                     kv_bytes_retained=kv,

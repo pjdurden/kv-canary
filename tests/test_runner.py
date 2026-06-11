@@ -27,6 +27,7 @@ def test_runner_writes_rows_and_resumes(tmp_path):
     assert n1 == 2                                   # 2 cells x 1 sample
     rows = [json.loads(line) for line in out.read_text().splitlines()]
     assert {r["cell_id"] for r in rows} == {"toy|full|1.0|tool", "toy|streamingllm|0.5|tool"}
+    assert all(r["raw_output"] == '{"name": "f", "arguments": {}}' for r in rows)  # generated text stored
     n2 = run_cells(cells, backend, _factory, tasks, str(out))   # resume
     assert n2 == 0                                   # everything already done
     assert len(out.read_text().splitlines()) == 2    # no duplicate rows
