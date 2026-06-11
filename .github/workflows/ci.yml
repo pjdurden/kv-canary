@@ -7,8 +7,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install -e ".[dev]"
-      - run: ruff check kvcanary tests scripts
-      - run: pytest -q
+      # CPU-only torch keeps the install lean (no ~2GB CUDA wheel) and satisfies torch>=2.2,
+      # so the ml extra below only pulls transformers + matplotlib.
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
       - run: pip install -e ".[dev,ml]"
-      - run: pytest -q -m slow      # CPU end-to-end smoke (downloads distilgpt2)
+      - run: ruff check kvcanary tests scripts
+      # Skip the `slow` model-download tests in CI (they run locally) so the badge is fast and
+      # doesn't depend on HuggingFace availability. This still runs all 35 unit tests, including
+      # the torch/matplotlib-backed compressor and report tests.
+      - run: pytest -q -m "not slow"
