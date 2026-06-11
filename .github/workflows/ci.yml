@@ -10,3 +10,5 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check kvcanary
       - run: pytest -q
+      - run: pip install -e ".[dev,ml]"
+      - run: pytest -q -m slow      # CPU end-to-end smoke (downloads distilgpt2)
