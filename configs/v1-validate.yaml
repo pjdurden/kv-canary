@@ -1,0 +1,28 @@
+# configs/v1-validate.yaml — cheap wiring-validation pass before the full v1 matrix.
+#
+# RUNBOOK step 2: run this on Qwen2.5-0.5B FIRST to debug the CompressedCache on a RoPE model
+# (distilgpt2 uses learned absolute positions and can't expose the two RoPE fidelity points —
+# post-eviction re-positioning and the decode mask; see compressed_cache.py). One small model,
+# one budget per family plus an aggressive 0.25 to actually perturb output, short outputs.
+#
+# What "validated" looks like:
+#   * full vs each lossy method produce DIFFERENT output (divergence != NULL — the wiring fires);
+#   * generation doesn't crash on the post-eviction cache (mask / cache_position are consistent);
+#   * eviction methods degrade functional accuracy MORE than perplexity implies (the finding).
+# Only then promote to configs/v1.yaml (Qwen2.5-7B, full budget sweep).
+#
+# WIRING GAPS to close before this is a real run (the CLI predates the GPU run):
+#   * `__main__.py` hardcodes device="cpu" — add a --device flag (Qwen-0.5B on CPU works for
+#     a wiring check but is slow; the 7B v1 needs CUDA).
+#   * sample sets (_CODE/_TOOL/_PPL) are 1 example each, hardcoded in `__main__.py`; swap in
+#     HumanEval / BFCL subsets for a real signal. A `limits:` key is NOT read by the loader
+#     (it's a no-op in smoke.yaml too), so sample count is whatever those lists contain.
+models: [Qwen/Qwen2.5-0.5B-Instruct]
+tasks: [code, tool, perplexity]
+compressors:
+  - {method: full,         budget: 1.0}
+  - {method: quantized,    budget: 0.25}    # int4 KV
+  - {method: streamingllm, budget: 0.5}
+  - {method: streamingllm, budget: 0.25}    # aggressive: stresses RoPE re-positioning
+  - {method: snapkv,       budget: 0.5}
+  - {method: snapkv,       budget: 0.25}

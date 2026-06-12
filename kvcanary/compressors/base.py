@@ -4,6 +4,7 @@ from abc import ABC
 class KVCompressor(ABC):
     name: str = "base"
     family: str = "none"      # "none" | "evict" | "quant"
+    needs_attention: bool = False   # True if kept_indices requires attn_scores (SnapKV)
 
     def __init__(self, budget: float):
         self.budget = float(budget)

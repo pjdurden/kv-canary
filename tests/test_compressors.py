@@ -48,6 +48,16 @@ def test_snapkv_selects_high_attention_tokens():
     assert sorted(idx) == idx
 
 
+def test_snapkv_respects_budget_when_keep_below_window():
+    # Regression: at low budget keep can be < window. The window must not blow the budget.
+    c = SnapKVCompressor(budget=0.25, window=8)
+    scores = torch.arange(20, dtype=torch.float)          # token 19 highest, descends
+    idx = c.kept_indices(n_tokens=20, attn_scores=scores)  # keep = round(0.25*20) = 5
+    assert len(idx) == 5                                   # exactly the budget, not `window`
+    assert sorted(idx) == idx
+    assert max(idx) == 19                                  # most-recent observation token kept
+
+
 def test_snapkv_budget_one_equals_full():
     c = SnapKVCompressor(budget=1.0, window=2)
     assert c.kept_indices(n_tokens=8, attn_scores=torch.zeros(8)) == list(range(8))

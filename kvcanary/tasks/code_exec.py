@@ -33,9 +33,13 @@ class CodeExecTask(Task):
     def __init__(self, problems: list[dict]):
         self.problems = problems
     def build_samples(self):
-        return [Sample(id=p["id"], prompt=p["prompt"], meta={"check": p["check"]})
+        # prefix (e.g. the HumanEval signature+docstring) is prepended to the model output before
+        # the check, so completion-style problems form a runnable program. Defaults to "".
+        return [Sample(id=p["id"], prompt=p["prompt"],
+                       meta={"check": p["check"], "prefix": p.get("prefix", "")})
                 for p in self.problems]
     def evaluate(self, sample, output: str, **kw):
-        res = run_in_sandbox(output + "\n" + sample.meta["check"], timeout=10)
+        program = sample.meta.get("prefix", "") + output + "\n" + sample.meta["check"]
+        res = run_in_sandbox(program, timeout=10)
         return EvalResult(scores={"pass@1": 1.0 if res.ok else 0.0},
                           detail={"stderr": res.stderr[:500]})
