@@ -41,13 +41,16 @@
     <a href="https://github.com/pjdurden/kv-canary/blob/main/docs/RUNBOOK.md">Runbook</a>
   </p>
 
-  <p>Lossy KV-cache compression (quantization, token eviction) is benchmarked almost entirely on
-  <strong>speed and memory</strong>, and on token-level quality (perplexity). But token-level
-  metrics can stay flat while <strong>functional</strong> outputs silently break: generated code
-  stops passing its tests, tool calls stop being valid JSON. kv-canary measures that gap.</p>
+  <p>Lossy KV-cache compression (quantization, token eviction) silently breaks <strong>functional</strong>
+  outputs: generated code stops passing its tests, tool calls stop being valid JSON.
+  <a href="https://arxiv.org/abs/2605.17613">VeriCache</a> shows these methods' outputs "increasingly
+  diverge from full-KV-cache outputs as more tokens are decoded, [leading] to catastrophic failures in
+  code generation and tool calling"; <a href="https://arxiv.org/abs/2510.00231">The Pitfalls of KV
+  Cache Compression</a> shows aggregate metrics hide those per-instruction failures.</p>
 
-  <p class="pitch">Everyone measures how <em>fast</em> KV compression is. Almost nobody measures
-  whether it silently breaks your code and tool calls while perplexity says everything is fine.</p>
+  <p class="pitch">The question kv-canary tests: when KV compression breaks your code and tool calls,
+  does the cheap token-level metric (perplexity) warn you, or stay silent? That is a <em>hypothesis
+  under test</em> — no paper has shown perplexity is blind to KV-compression damage.</p>
 
   <h2>The finding: divergence</h2>
   <p>For each compression method, kv-canary plots two lines against <strong>KV memory retained</strong>:
@@ -88,12 +91,15 @@ python scripts/aggregate_and_report.py results/raw/smoke.jsonl
   finished cells — so a killed spot-GPU run restarts cheaply.</p>
 
   <div class="note">
-    <strong>Status — honest caveat.</strong> This is the measurement harness. The headline finding
-    is not in the repo yet: one piece is intentionally deferred to the GPU run — wiring the eviction
-    selection into HuggingFace's live KV cache. Until that lands, all methods produce identical output
-    and the divergence is NULL. Any numbers in a freshly generated report from the CPU smoke are
-    pipeline-shape placeholders, not a result. See the
-    <a href="https://github.com/pjdurden/kv-canary/blob/main/docs/RUNBOOK.md">runbook</a>.
+    <strong>Status &amp; honest caveats.</strong> The harness is wired end-to-end — compression is
+    applied into HF's live KV cache and perplexity is measured under it, so the divergence is real
+    (run the GPU matrix on a real instruct model before trusting numbers). Two method implementations
+    are simplified and a faithful reviewer would flag them: StreamingLLM evicts from a post-RoPE cache
+    <em>without re-roping</em>, and SnapKV is head-averaged without pooling — so treat these as
+    "-style" eviction, not exact reproductions. Functional-degradation-under-KV-compression is also
+    already measured by NVIDIA KVPress and others; the narrow niche here is executable-code +
+    tool-schema conformance vs. perplexity. Full cited audit:
+    <a href="https://github.com/pjdurden/kv-canary/blob/main/docs/RESEARCH.md">RESEARCH.md</a>.
   </div>
 
   <footer>

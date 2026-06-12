@@ -6,18 +6,25 @@
 
 **A canary for *silent* KV-cache-compression failures.**
 
-Lossy KV-cache compression (quantization, token eviction) is benchmarked almost entirely on
-**speed and memory** — and on token-level quality (perplexity). But token-level metrics can stay
-flat while **functional** outputs silently break: generated code stops passing its tests, tool
-calls stop being valid JSON. kv-canary measures that gap.
+Lossy KV-cache compression (quantization, token eviction) silently breaks **functional** outputs:
+generated code stops passing its tests, tool calls stop being valid JSON. VeriCache
+([arXiv:2605.17613](https://arxiv.org/abs/2605.17613)) shows these methods are "inherently
+lossy … their outputs increasingly diverge from full-KV-cache outputs as more tokens are decoded,
+which leads to catastrophic failures in code generation and tool calling." *The Pitfalls of KV Cache
+Compression* ([arXiv:2510.00231](https://arxiv.org/abs/2510.00231), ACL 2026) shows aggregate
+benchmark metrics hide these per-instruction failures.
 
-> The wedge: everyone measures how *fast* KV compression is. Almost nobody measures whether it
-> silently breaks your code and tool calls while perplexity says everything is fine.
+> The question kv-canary tests: when KV compression breaks your code and tool calls, does the cheap
+> token-level metric (perplexity) **warn you, or stay silent?** This is a *hypothesis under test* —
+> no paper has shown perplexity is blind to KV-compression damage; kv-canary measures whether it is.
 
-This is a measurement harness + methodology, motivated by VeriCache
-([arXiv:2605.17613](https://arxiv.org/html/2605.17613)), which showed lossy-KV bias accumulates
-linearly and functional tasks fail while token-level metrics look unchanged. kv-canary makes that
-effect reproducible and quantifiable across compression methods.
+**Scope & prior art (honest).** Functional/downstream degradation under KV compression is *already*
+measured by [NVIDIA KVPress](https://github.com/NVIDIA/kvpress), Pitfalls (IFEval), and
+[arXiv:2512.12008](https://arxiv.org/abs/2512.12008) (8 reasoning benchmarks). What those don't score
+is **executable code (pass@k) and JSON/tool-call schema conformance** specifically — that narrow
+target, contrasted against perplexity, is kv-canary's niche. See
+[`docs/RESEARCH.md`](docs/RESEARCH.md) for the full cited gap audit, including known implementation
+limitations (StreamingLLM re-roping, per-head SnapKV) that a faithful run must address.
 
 ---
 
@@ -100,19 +107,26 @@ configs/*.yaml ─▶ runner ─▶ results/raw/*.jsonl ─▶ aggregate ─▶ 
 
 ## Status & honest caveats
 
-**v1 is the harness.** 16 build steps, ~38 tests, green CI. The real run is documented in
-[`docs/RUNBOOK.md`](docs/RUNBOOK.md) and needs a single 24GB GPU.
+**v1 is the harness, wired end-to-end.** Compression is applied into HF's live KV cache
+(`CompressedCache`), `score()` measures perplexity under the compressed context, and the divergence
+is real (not NULL). The headline GPU run on a real instruct model is documented in
+[`docs/RUNBOOK.md`](docs/RUNBOOK.md); run it before trusting any numbers. Full cited audit in
+[`docs/RESEARCH.md`](docs/RESEARCH.md). Known limitations a faithful run must weigh:
 
-- **The headline finding is not in this repo yet.** One piece is intentionally deferred to the GPU
-  run: wiring the eviction selection into HuggingFace's live KV cache (a custom `DynamicCache`
-  subclass). Until that lands, `HFBackend` records *how much* KV each method would retain but runs
-  normal generation — so **all methods produce identical output and the divergence is NULL.** This
-  is called out in the `HFBackend` docstring and the runbook. Any numbers you see in a freshly
-  generated `report/` from the CPU smoke are pipeline-shape placeholders, **not** a result.
-- The gap kv-canary targets rests on a single recent paper (VeriCache); the contribution here is
-  making it *measurable and reproducible*, not claiming novelty of the phenomenon.
-- The wedge is **functional-vs-token-level divergence**, not "reproducible benchmarking" — local
-  inference benchmarking is fragmented (a coverage gap), but that is a different problem.
+- **The method implementations are simplified and a faithful reviewer would flag two of them.**
+  StreamingLLM here evicts from a *post-RoPE* HF cache **without re-roping** kept keys to contiguous
+  cache positions — the real method caches keys pre-RoPE and re-indexes positions, so eviction here
+  is degraded partly *for the wrong reason* (see RESEARCH.md Q3). SnapKV here **averages attention
+  over heads** with no pooling, whereas real SnapKV selects **per-head with a max-pool clustering
+  step** (Q4). Treat these as "StreamingLLM-/SnapKV-style" eviction, not exact reproductions.
+- **"Perplexity is blind" is a hypothesis under test, not a cited result.** VeriCache shows the
+  functional failures; no paper shows perplexity fails to warn. kv-canary measures whether it does.
+- **Prior art exists.** KVPress / Pitfalls / arXiv:2512.12008 already measure functional/downstream
+  degradation under KV compression; kv-canary's narrow niche is executable-code + tool-schema
+  conformance specifically. The originality is that corner, not the phenomenon.
+- **Design scope.** Compression is applied to the prompt once (no decode-time rolling); VeriCache's
+  failures accrue over long *decode*, so this design under-exercises that regime (RESEARCH.md §Deeper
+  problems). Quant is per-tensor absmax and `bits/16` ignores scale/zero-point overhead.
 
 ## Layout
 
