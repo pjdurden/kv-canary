@@ -10,13 +10,9 @@
 #   * generation doesn't crash on the post-eviction cache (mask / cache_position are consistent);
 #   * eviction methods degrade functional accuracy MORE than perplexity implies (the finding).
 # Only then promote to configs/v1.yaml (Qwen2.5-7B, full budget sweep).
-#
-# WIRING GAPS to close before this is a real run (the CLI predates the GPU run):
-#   * `__main__.py` hardcodes device="cpu" — add a --device flag (Qwen-0.5B on CPU works for
-#     a wiring check but is slow; the 7B v1 needs CUDA).
-#   * sample sets (_CODE/_TOOL/_PPL) are 1 example each, hardcoded in `__main__.py`; swap in
-#     HumanEval / BFCL subsets for a real signal. A `limits:` key is NOT read by the loader
-#     (it's a no-op in smoke.yaml too), so sample count is whatever those lists contain.
+# Run via: ./scripts/run_gpu.sh validate   (or `python -m kvcanary run configs/v1-validate.yaml
+#   --device cuda --data real --limit 20 --max-new-tokens 256`). Sample count comes from --limit
+# (a `limits:` key here would be ignored by the loader).
 models: [Qwen/Qwen2.5-0.5B-Instruct]
 tasks: [code, tool, perplexity]
 compressors:

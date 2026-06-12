@@ -15,14 +15,19 @@ class HFBackend(Backend):
     points to validate on the GPU run.
     """
 
+    _DTYPES = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}
+
     def __init__(self, model_id: str, device: str = "cpu", dtype=None):
         self.tok = AutoTokenizer.from_pretrained(model_id)
-        # eager attention so SnapKV's prefill `output_attentions=True` actually returns scores
-        # (sdpa/flash don't). Default fp16 on CUDA so a 7B fits a 24GB card; fp32 on CPU.
+        # eager attention is REQUIRED, not a preference: SnapKV reads prefill attention via
+        # output_attentions, and sdpa/flash return nothing for it (verified on transformers 5.x).
+        # At these short prompt lengths eager's overhead over sdpa is negligible (attention is not
+        # the bottleneck), so we use it for all methods rather than switch impl per cell.
         if dtype is None:
-            dtype = torch.float16 if str(device).startswith("cuda") else torch.float32
+            dtype = "bf16" if str(device).startswith("cuda") else "fp32"  # bf16 = Qwen2.5 native
+        torch_dtype = self._DTYPES.get(dtype, dtype) if isinstance(dtype, str) else dtype
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_id, dtype=dtype, attn_implementation="eager"
+            model_id, dtype=torch_dtype, attn_implementation="eager"
         ).to(device).eval()
         self.device = device
         if self.tok.pad_token is None:

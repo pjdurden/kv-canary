@@ -21,7 +21,8 @@ def _done_keys(path: str) -> set:
     return keys
 
 
-def run_cells(cells, backend, compressor_factory, tasks, out_path: str) -> int:
+def run_cells(cells, backend, compressor_factory, tasks, out_path: str,
+              max_new_tokens: int = 256) -> int:
     done = _done_keys(out_path)
     written = 0
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
@@ -34,7 +35,8 @@ def run_cells(cells, backend, compressor_factory, tasks, out_path: str) -> int:
                     continue
                 t0 = time.perf_counter()
                 if task.needs_generation:
-                    gen = backend.generate(sample.prompt, compressor=comp)
+                    gen = backend.generate(sample.prompt, compressor=comp,
+                                           max_new_tokens=max_new_tokens)
                     res = task.evaluate(sample, output=gen.text)
                     raw, n_tok, kv = gen.text, gen.n_tokens, gen.kv_bytes_retained
                 else:

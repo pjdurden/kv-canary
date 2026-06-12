@@ -24,6 +24,10 @@ def main():
                            "via `datasets` (network). Tool-calls are always the bundled FC set.")
     runp.add_argument("--limit", type=int, default=None,
                       help="max samples per task (default: all available in the chosen source)")
+    runp.add_argument("--dtype", choices=["bf16", "fp16", "fp32"], default=None,
+                      help="model dtype (default: bf16 on cuda, fp32 on cpu)")
+    runp.add_argument("--max-new-tokens", type=int, default=256,
+                      help="generation cap for code/tool tasks (lower = cheaper)")
     args = ap.parse_args()
 
     cells = load_cells(args.config)
@@ -33,16 +37,17 @@ def main():
             f"v1 runs one model per config (the runner uses a single backend for all cells); "
             f"got {models}. Split into separate config files / runs."
         )
-    backend = HFBackend(model_id=models[0], device=args.device)
+    backend = HFBackend(model_id=models[0], device=args.device, dtype=args.dtype)
     n = args.limit if args.limit is not None else 10**9   # None -> take everything available
     tasks = {
         "tool": ToolCallTask(load_tool_problems(n, source=args.data)),
         "code": CodeExecTask(load_code_problems(n, source=args.data)),
         "perplexity": PerplexityTask(load_ppl_texts(n, source=args.data)),
     }
-    written = run_cells(cells, backend, build_compressor, tasks, args.out)  # factory, per-cell
-    print(json.dumps({"written": written, "out": args.out,
-                      "device": args.device, "data": args.data}))
+    written = run_cells(cells, backend, build_compressor, tasks, args.out,
+                        max_new_tokens=args.max_new_tokens)
+    print(json.dumps({"written": written, "out": args.out, "device": args.device,
+                      "data": args.data, "max_new_tokens": args.max_new_tokens}))
 
 
 if __name__ == "__main__":
